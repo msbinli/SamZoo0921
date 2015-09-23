@@ -1,0 +1,72 @@
+﻿{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "gatewayName": {
+            "value": "ARG-Gateway"
+        },
+        "apiAppSecret": {
+            "value": "R0B0ZXdAeQ=="
+        },
+        "sqlserverName": {
+            "value": "argsqlserver"
+        },
+        "sqlserverAdminLogin": {
+            "value": "aisapsystem"
+        },
+        "sqlserverAdminLoginPassword": {
+            "value": "AisapP@ssw0rd"
+        },
+        "AS2DatabaseName": {
+            "value": "ARGAS2Database"
+        },
+        "X12DatabaseName": {
+            "value": "ARGX12Database"
+        },
+        "TPMDatabaseName": {
+            "value": "ARGTPMDatabase"
+        },
+        "ServicePlanSettings": {
+            "value": {
+                "computeMode": "Dedicated",
+                "siteMode": "Limited",
+                "workerSize": "1",
+                "hostingEnvironment": "",
+                "sku": "Standard",
+                "name": "ARGStandardServicePlan",
+                "numberOfWorkers": "1"
+            }
+        },
+        "StorageSettings": {
+            "value": {
+                "name": "argpreprodcommo",
+                "type": "Standard_GRS",
+                "location": "West US"
+            }
+        },
+        "location": {
+            "value": "West US"
+        },
+        "TrackingDatabase": {
+            "value": {
+                "name": "ArgTrackingDb",
+                "edition": "Standard",
+                "collation": "SQL_Latin1_General_CP1_CI_AS"
+            }
+        },
+        "tradingPartnerContextStorageSettings": {
+            "value": {
+                "name": "argtradingpartnercontext",
+                "type": "Standard_GRS",
+                "location": "West US"
+            }
+        },
+        "archivedStorageSettings": {
+            "value": {
+                "name": "argarchivednew",
+                "type": "Standard_GRS",
+                "location": "West US"
+            }
+        }
+    }
+}
