@@ -1,0 +1,420 @@
+﻿{
+    "$schema": "http://schemas.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "gatewayName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the gateway you wish to create. The API app gets registered to this gateway."
+            }
+
+        },
+        "apiAppSecret": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The secret for the API app. This value must be a base64-encoded string."
+            }
+        },
+        "servicePlanSettings": {
+            "type": "Object",
+            "defaultValue": {
+                "computeMode": "Dedicated",
+                "siteMode": "Limited",
+                "workerSize": "0",
+                "hostingEnvironment": "",
+                "sku": "Standard",
+                "name": "StandardServicePlan",
+                "numberOfWorkers": "1"
+            },
+            "metadata": {
+                "description": "The settings of the existing hosting plan."
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": {
+                "value": "West US"
+            }
+        },
+        "sqlServerName": {
+            "type": "string"
+        },
+        "sqlServerAdminLogin": {
+            "type": "string"
+        },
+        "sqlServerAdminLoginPassword": {
+            "type": "securestring"
+        },
+
+        "storageSettings": {
+            "type": "object",
+            "defaultValue": {
+                "name": "preprodstorage-New",
+                "type": "Standard_GRS",
+                "location": "West US"
+            }
+        },
+        "tradingPartnerContextStorageSettings": {
+            "type": "object",
+            "defaultValue": {
+                "name": "tradingpartnercontext",
+                "type": "Standard_GRS",
+                "location": "West US"
+            }
+        },
+        "archivedStorageSettings": {
+            "type": "object",
+            "defaultValue": {
+                "name": "archived",
+                "type": "Standard_GRS",
+                "location": "West US"
+            }
+        },
+        "trackingDatabase": {
+            "type": "object",
+            "defaultValue": {
+                "name": "dummyTracking",
+                "edition": "Standard",
+                "collation": "SQL_Latin1_General_CP1_CI_AS"
+            }
+        },
+        "AS2DatabaseName": {
+            "type": "string"
+        },
+        "AS2DatabaseCollation": {
+            "type": "string",
+            "defaultValue": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        "AS2DatabaseEdition": {
+            "type": "string",
+            "defaultValue": "Standard",
+            "allowedValues": [
+                "Premium",
+                "Standard"
+            ]
+        },
+        "TPMDatabaseName": {
+            "type": "string"
+        },
+        "TPMDatabaseCollation": {
+            "type": "string",
+            "defaultValue": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        "TPMDatabaseEdition": {
+            "type": "string",
+            "defaultValue": "Standard",
+            "allowedValues": [
+                "Premium",
+                "Standard"
+            ]
+        },
+        "X12DatabaseName": {
+            "type": "string"
+        },
+        "X12DatabaseCollation": {
+            "type": "string",
+            "defaultValue": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        "X12DatabaseEdition": {
+            "type": "string",
+            "defaultValue": "Standard",
+            "allowedValues": [
+                "Premium",
+                "Standard"
+            ]
+        }
+    },
+    "variables": {
+        "packageId": "Microsoft.ApiApp"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2015-04-01",
+            "name": "[parameters('servicePlanSettings').name]",
+            "tags": { "displayName": "ServicePlan" },
+            "location": "[parameters('location')]",
+            "properties": {
+                "name": "[parameters('servicePlanSettings').name]",
+                "sku": "[parameters('servicePlanSettings').sku]",
+                "workerSize": "[parameters('servicePlanSettings').workerSize]",
+                "hostingEnvironment": "[parameters('servicePlanSettings').hostingEnvironment]",
+                "numberOfWorkers": "[parameters('servicePlanSettings').numberOfWorkers]"
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2015-04-01",
+            "name": "[parameters('gatewayName')]",
+            "location": "[parameters('location')]",
+            "kind": "gateway",
+            "tags": { "displayName": "GatewayWebsite" },
+            "resources": [
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/gateway",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites',parameters('gatewayName'))]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.AppService/gateways', parameters('gatewayName'))]"
+                    }
+                }
+            ],
+            "properties": {
+                "name": "[parameters('gatewayName')]",
+                "gatewaySiteName": "[parameters('gatewayName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('servicePlanSettings').name)]",
+                "hostingEnvironment": "[parameters('servicePlanSettings').hostingEnvironment]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "ApiAppsGateway_EXTENSION_VERSION",
+                            "value": "latest"
+                        },
+                        {
+                            "name": "EmaStorage",
+                            "value": "D:\\home\\data\\apiapps"
+                        },
+                        {
+                            "name": "WEBSITE_START_SCM_ON_SITE_CREATION",
+                            "value": "1"
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('servicePlanSettings').name)]"
+            ]
+        },
+        {
+            "type": "Microsoft.AppService/gateways",
+            "apiVersion": "2015-03-01-preview",
+            "name": "[parameters('gatewayName')]",
+            "location": "[parameters('location')]",
+            "tags": { "displayName": "Gateway" },
+            "resources": [
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/gatewaySite",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.AppService/gateways', parameters('gatewayName'))]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.Web/sites', parameters('gatewayName'))]"
+                    }
+                }
+            ],
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('gatewayName'))]"
+            ],
+            "properties": {
+                "host": {
+                    "resourceName": "[parameters('gatewayName')]"
+                }
+            }
+        },
+        {
+            "name": "[parameters('sqlserverName')]",
+            "type": "Microsoft.Sql/servers",
+            "location": "[parameters('location')]",
+            "apiVersion": "2015-01-01-preview",
+            "dependsOn": [ ],
+            "tags": {
+                "displayName": "AISAP_PreProdSqlServer-New"
+            },
+            "properties": {
+                "administratorLogin": "[parameters('sqlserverAdminLogin')]",
+                "administratorLoginPassword": "[parameters('sqlserverAdminLoginPassword')]"
+            },
+            "resources": [
+                {
+                    "name": "AllowAllWindowsAzureIps",
+                    "type": "firewallrules",
+                    "location": "[parameters('location')]",
+                    "apiVersion": "2015-01-01-preview",
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', parameters('sqlserverName'))]"
+                    ],
+                    "properties": {
+                        "startIpAddress": "0.0.0.0",
+                        "endIpAddress": "0.0.0.0"
+                    }
+                },
+                {
+                    "name": "[parameters('TrackingDatabase').name]",
+                    "type": "databases",
+                    "location": "[parameters('location')]",
+                    "apiVersion": "2014-04-01-preview",
+                    "dependsOn": [
+                        "[parameters('sqlserverName')]"
+                    ],
+                    "tags": {
+                        "displayName": "TrackingDatabase"
+                    },
+                    "properties": {
+                        "collation": "[parameters('TrackingDatabase').collation]",
+                        "edition": "[parameters('TrackingDatabase').edition]",
+                        "maxSizeBytes": "1073741824"
+                    }
+                },
+                {
+                    "name": "[parameters('AS2DatabaseName')]",
+                    "type": "databases",
+                    "location": "[parameters('location')]",
+                    "apiVersion": "2014-04-01-preview",
+                    "dependsOn": [
+                        "[parameters('sqlserverName')]"
+                    ],
+                    "tags": {
+                        "displayName": "AS2Database"
+                    },
+                    "properties": {
+                        "collation": "[parameters('AS2DatabaseCollation')]",
+                        "edition": "[parameters('AS2DatabaseEdition')]",
+                        "maxSizeBytes": "1073741824"
+                    }
+                },
+                {
+                    "name": "[parameters('TPMDatabaseName')]",
+                    "type": "databases",
+                    "location": "[parameters('location')]",
+                    "apiVersion": "2014-04-01-preview",
+                    "dependsOn": [
+                        "[parameters('sqlserverName')]"
+                    ],
+                    "tags": {
+                        "displayName": "TPMDatabase"
+                    },
+                    "properties": {
+                        "collation": "[parameters('TPMDatabaseCollation')]",
+                        "edition": "[parameters('TPMDatabaseEdition')]",
+                        "maxSizeBytes": "1073741824"
+                    }
+                },
+                {
+                    "name": "[parameters('X12DatabaseName')]",
+                    "type": "databases",
+                    "location": "[parameters('location')]",
+                    "apiVersion": "2014-04-01-preview",
+                    "dependsOn": [
+                        "[parameters('sqlserverName')]"
+                    ],
+                    "tags": {
+                        "displayName": "X12Database"
+                    },
+                    "properties": {
+                        "collation": "[parameters('X12DatabaseCollation')]",
+                        "edition": "[parameters('X12DatabaseEdition')]",
+                        "maxSizeBytes": "1073741824"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "[parameters('storageSettings').name]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "location": "[parameters('storageSettings').location]",
+            "apiVersion": "2015-05-01-preview",
+            "dependsOn": [ ],
+            "tags": {
+                "displayName": "AISAPStorageAccount"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "accountType": "[parameters('storageSettings').type]"
+            }
+        },
+        {
+            "name": "[parameters('tradingPartnerContextStorageSettings').name]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "location": "[parameters('tradingPartnerContextStorageSettings').location]",
+            "apiVersion": "2015-05-01-preview",
+            "dependsOn": [ ],
+            "tags": {
+                "displayName": "TradingPartnerContextStorageAccount"
+            },
+            "properties": {
+                "accountType": "[parameters('tradingPartnerContextStorageSettings').type]"
+            }
+        },
+        {
+            "name": "[parameters('archivedStorageSettings').name]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "location": "[parameters('archivedStorageSettings').location]",
+            "apiVersion": "2015-05-01-preview",
+            "dependsOn": [ ],
+            "tags": {
+                "displayName": "Archived Storage Account"
+            },
+            "properties": {
+                "accountType": "[parameters('archivedStorageSettings').type]"
+            }
+        }
+    ],
+    "outputs": {
+        "AS2DatabaseConnectionString": {
+            "type": "string",
+            "value": "[concat('Server=tcp:', parameters('sqlServerName'), '.database.windows.net,1433;Database=', parameters('AS2DatabaseName'), ';User ID=', parameters('sqlServerAdminLogin'), ';Password=', parameters('sqlServerAdminLoginPassword'), ';Trusted_Connection=False;Encrypt=True;Connection Timeout=30;')]"
+        },
+        "TPMDatabaseConnectionString": {
+            "type": "string",
+            "value": "[concat('Server=tcp:', parameters('sqlServerName'), '.database.windows.net,1433;Database=', parameters('TPMDatabaseName'), ';User ID=', parameters('sqlServerAdminLogin'), ';Password=', parameters('sqlServerAdminLoginPassword'), ';Trusted_Connection=False;Encrypt=True;Connection Timeout=30;')]"
+        },
+        "X12DatabaseConnectionString": {
+            "type": "string",
+            "value": "[concat('Server=tcp:', parameters('sqlServerName'), '.database.windows.net,1433;Database=', parameters('X12DatabaseName'), ';User ID=', parameters('sqlServerAdminLogin'), ';Password=', parameters('sqlServerAdminLoginPassword'), ';Trusted_Connection=False;Encrypt=True;Connection Timeout=30;')]"
+        },
+        "StorageAccountName": {
+            "type": "string",
+            "value": "[parameters('storageSettings').name]",
+            "metadata": {
+                "description": "Output the storage account name."
+            }
+        },
+        "StorageAccountKey": {
+            "type": "string",
+            "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageSettings').name), '2015-05-01-preview').key1]",
+            "metadata": {
+                "description": "primary access key for the storage account."
+            }
+        },
+        "TpcStorageAccountName": {
+            "type": "string",
+            "value": "[parameters('tradingPartnerContextStorageSettings').name]",
+            "metadata": {
+                "description": "Output the primary access key for the storage account & account name."
+            }
+        },
+        "TpcStorageAccountKey": {
+            "type": "string",
+            "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('tradingPartnerContextStorageSettings').name), '2015-05-01-preview').key1]",
+            "metadata": {
+                "description": "primary access key for the storage account."
+            }
+        },
+        "ArchiveStorage": {
+            "type": "object",
+            "value": {
+                "AccountName": "[parameters('archivedStorageSettings').name]",
+                "StorageAccountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('archivedStorageSettings').name), '2015-05-01-preview').key1]"
+            },
+            "metadata": {
+                "description": "Output the archived storage account name and primary access key."
+            }
+        },
+        "SqlServer": {
+            "type": "object",
+            "value": {
+                "Name": "[parameters('sqlServerName')]",
+                "UserName": "[parameters('sqlServerAdminLogin')]",
+                "Password": "[parameters('sqlServerAdminLoginPassword')]"
+            },
+            "metadata": {
+                "description": "Sql Server Details- Sql server name, username and password."
+            }
+        }
+    }
+}
